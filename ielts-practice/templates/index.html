@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .title }}</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        .user-info {
+            text-align: right;
+            margin-bottom: 20px;
+            color: #666;
+        }
+        .logout-link {
+            color: #f44336;
+            text-decoration: none;
+            margin-left: 10px;
+        }
+        .logout-link:hover {
+            text-decoration: underline;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .features {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+        }
+        .feature-card {
+            flex: 1;
+            max-width: 500px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 30px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        .feature-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #4CAF50;
+        }
+        .feature-title {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .feature-description {
+            color: #666;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+        .feature-button {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+        .feature-button:hover {
+            background-color: #45a049;
+        }
+        .error-message {
+            color: #f44336;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="user-info">
+            欢迎，{{ .user }} <a href="/logout" class="logout-link">退出登录</a>
+        </div>
+        <h1>IELTS口语练习助手</h1>
+        {{if .error}}
+        <div class="error-message">
+            {{.error}}
+        </div>
+        {{end}}
+        <div class="features">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-book-reader"></i>
+                </div>
+                <h2 class="feature-title">故事生成</h2>
+                <p class="feature-description">
+                    根据您的英语水平和考试时间，生成个性化的口语练习故事。
+                    故事中将包含多个雅思口语题目，帮助您更好地准备考试。
+                </p>
+                <a href="/story-generator" class="feature-button">开始生成</a>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-microphone"></i>
+                </div>
+                <h2 class="feature-title">口语训练</h2>
+                <p class="feature-description">
+                    与AI考官进行实时口语对话训练，获取即时反馈和改进建议。
+                    模拟真实考试场景，提高口语表达能力。
+                </p>
+                <a href="/speaking-practice" class="feature-button">开始训练</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

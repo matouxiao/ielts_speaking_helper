@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>故事生成 - IELTS口语练习助手</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .user-info {
+            text-align: right;
+            margin-bottom: 20px;
+            color: #666;
+        }
+        .logout-link {
+            color: #f44336;
+            text-decoration: none;
+            margin-left: 10px;
+        }
+        .back-link {
+            display: inline-block;
+            color: #666;
+            text-decoration: none;
+            margin-right: 10px;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .score-input {
+            display: none;
+        }
+        .score-input.active {
+            display: block;
+        }
+        .error-message {
+            color: #f44336;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="user-info">
+            <a href="/home" class="back-link">返回首页</a>
+            欢迎，{{ .user }} <a href="/logout" class="logout-link">退出登录</a>
+        </div>
+        <h1>生成口语练习故事</h1>
+        {{if .error}}
+        <div class="error-message">
+            {{.error}}
+        </div>
+        {{end}}
+        <form action="/generate" method="POST">
+            <div class="form-group">
+                <label for="exam_type">考试类型：</label>
+                <select id="exam_type" name="exam_type" required onchange="showScoreInput()">
+                    <option value="">请选择考试类型</option>
+                    <option value="gaokao">高考英语</option>
+                    <option value="cet4">CET-4</option>
+                    <option value="cet6">CET-6</option>
+                </select>
+            </div>
+            
+            <div id="gaokao_score" class="form-group score-input">
+                <label for="gaokao_score_input">高考英语成绩：</label>
+                <input type="number" id="gaokao_score_input" name="score" min="0" max="150" placeholder="请输入0-150之间的分数">
+            </div>
+            
+            <div id="cet4_score" class="form-group score-input">
+                <label for="cet4_score_input">CET-4成绩：</label>
+                <input type="number" id="cet4_score_input" name="score" min="0" max="710" placeholder="请输入0-710之间的分数">
+            </div>
+            
+            <div id="cet6_score" class="form-group score-input">
+                <label for="cet6_score_input">CET-6成绩：</label>
+                <input type="number" id="cet6_score_input" name="score" min="0" max="710" placeholder="请输入0-710之间的分数">
+            </div>
+
+            <div class="form-group">
+                <label for="exam_month">计划考试月份：</label>
+                <select id="exam_month" name="exam_month" required>
+                    <option value="">请选择月份</option>
+                    <option value="1">1月</option>
+                    <option value="2">2月</option>
+                    <option value="3">3月</option>
+                    <option value="4">4月</option>
+                    <option value="5">5月</option>
+                    <option value="6">6月</option>
+                    <option value="7">7月</option>
+                    <option value="8">8月</option>
+                    <option value="9">9月</option>
+                    <option value="10">10月</option>
+                    <option value="11">11月</option>
+                    <option value="12">12月</option>
+                </select>
+            </div>
+            <button type="submit">生成练习故事</button>
+        </form>
+    </div>
+
+    <script>
+        function showScoreInput() {
+            // 隐藏所有分数输入框
+            const scoreInputs = document.querySelectorAll('.score-input');
+            scoreInputs.forEach(input => {
+                input.classList.remove('active');
+                const scoreField = input.querySelector('input');
+                if (scoreField) {
+                    scoreField.required = false;
+                }
+            });
+            
+            // 显示选中的分数输入框
+            const examType = document.getElementById('exam_type').value;
+            if (examType) {
+                const selectedInput = document.getElementById(examType + '_score');
+                if (selectedInput) {
+                    selectedInput.classList.add('active');
+                    const scoreField = selectedInput.querySelector('input');
+                    if (scoreField) {
+                        scoreField.required = true;
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html> 

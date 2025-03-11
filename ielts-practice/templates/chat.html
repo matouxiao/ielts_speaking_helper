@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>故事对话 - IELTS口语练习助手</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .user-info {
+            text-align: right;
+            margin-bottom: 20px;
+            color: #666;
+        }
+        .logout-link {
+            color: #f44336;
+            text-decoration: none;
+            margin-left: 10px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .story-container {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        .chat-container {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .user-message {
+            background-color: #e3f2fd;
+            margin-left: 20%;
+            margin-right: 10px;
+        }
+        .ai-message {
+            background-color: #f5f5f5;
+            margin-right: 20%;
+            margin-left: 10px;
+        }
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+        .message-input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .send-button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .send-button:hover {
+            background-color: #45a049;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .control-button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            text-align: center;
+            text-decoration: none;
+        }
+        .regenerate {
+            background-color: #2196F3;
+            color: white;
+        }
+        .regenerate:hover {
+            background-color: #1976D2;
+        }
+        .back {
+            background-color: #757575;
+            color: white;
+        }
+        .back:hover {
+            background-color: #616161;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="user-info">
+            欢迎，{{ .user }} <a href="/logout" class="logout-link">退出登录</a>
+        </div>
+        <h1>口语练习故事</h1>
+        <div class="story-container">
+            {{ .story }}
+        </div>
+        <div class="chat-container" id="chatContainer">
+            <!-- 消息将在这里动态添加 -->
+        </div>
+        <div class="input-container">
+            <input type="text" class="message-input" id="messageInput" placeholder="输入您的修改建议或问题...">
+            <button class="send-button" onclick="sendMessage()">发送</button>
+        </div>
+        <div class="controls">
+            <button class="control-button regenerate" onclick="regenerateStory()">重新生成故事</button>
+            <a href="/home" class="control-button back">返回主页</a>
+        </div>
+    </div>
+
+    <script>
+        let messages = [];
+
+        function addMessage(content, isUser) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
+            messageDiv.textContent = content;
+            document.getElementById('chatContainer').appendChild(messageDiv);
+            document.getElementById('chatContainer').scrollTop = document.getElementById('chatContainer').scrollHeight;
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            // 添加用户消息到界面
+            addMessage(message, true);
+            input.value = '';
+
+            try {
+                // 发送消息到服务器
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    // 添加AI回复到界面
+                    addMessage(data.response, false);
+                } else {
+                    addMessage('抱歉，处理您的消息时出现错误。', false);
+                }
+            } catch (error) {
+                addMessage('抱歉，发送消息时出现错误。', false);
+            }
+        }
+
+        async function regenerateStory() {
+            try {
+                const response = await fetch('/regenerate', {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.querySelector('.story-container').textContent = data.story;
+                    // 清空聊天记录
+                    document.getElementById('chatContainer').innerHTML = '';
+                } else {
+                    addMessage('抱歉，重新生成故事时出现错误。', false);
+                }
+            } catch (error) {
+                addMessage('抱歉，重新生成故事时出现错误。', false);
+            }
+        }
+
+        // 支持按Enter键发送消息
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html> 

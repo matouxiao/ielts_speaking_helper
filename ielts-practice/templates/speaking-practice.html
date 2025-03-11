@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>口语训练 - IELTS口语练习助手</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .user-info {
+            text-align: right;
+            margin-bottom: 20px;
+            color: #666;
+        }
+        .logout-link {
+            color: #f44336;
+            text-decoration: none;
+            margin-left: 10px;
+        }
+        .back-link {
+            display: inline-block;
+            color: #666;
+            text-decoration: none;
+            margin-right: 10px;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .practice-area {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        .question-area {
+            margin-bottom: 20px;
+        }
+        .question {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .timer {
+            font-size: 24px;
+            color: #4CAF50;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .control-button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            text-align: center;
+        }
+        .start-button {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .stop-button {
+            background-color: #f44336;
+            color: white;
+        }
+        .next-button {
+            background-color: #2196F3;
+            color: white;
+        }
+        .feedback-area {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .recording-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #ccc;
+            margin: 0 auto 20px;
+        }
+        .recording-indicator.active {
+            background-color: #f44336;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        .error-message {
+            color: #f44336;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="user-info">
+            <a href="/home" class="back-link">返回首页</a>
+            欢迎，{{ .user }} <a href="/logout" class="logout-link">退出登录</a>
+        </div>
+        <h1>雅思口语训练</h1>
+        {{if .error}}
+        <div class="error-message">
+            {{.error}}
+        </div>
+        {{end}}
+        <div class="practice-area">
+            <div class="question-area">
+                <div class="question">
+                    <!-- 问题将在这里动态显示 -->
+                    准备好后点击"开始回答"按钮，系统将随机生成雅思口语题目。
+                </div>
+                <div class="timer">02:00</div>
+            </div>
+            <div class="recording-indicator"></div>
+            <div class="controls">
+                <button class="control-button start-button" onclick="startAnswer()">开始回答</button>
+                <button class="control-button stop-button" onclick="stopAnswer()" disabled>结束回答</button>
+                <button class="control-button next-button" onclick="nextQuestion()" disabled>下一题</button>
+            </div>
+            <div class="feedback-area">
+                <!-- AI反馈将在这里显示 -->
+                您的回答将在这里获得实时反馈...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isRecording = false;
+        let timer = null;
+        let timeLeft = 120; // 2分钟
+
+        function updateTimer() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            document.querySelector('.timer').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function startAnswer() {
+            isRecording = true;
+            document.querySelector('.recording-indicator').classList.add('active');
+            document.querySelector('.start-button').disabled = true;
+            document.querySelector('.stop-button').disabled = false;
+            document.querySelector('.next-button').disabled = true;
+
+            // 开始计时
+            timer = setInterval(() => {
+                timeLeft--;
+                updateTimer();
+                if (timeLeft <= 0) {
+                    stopAnswer();
+                }
+            }, 1000);
+
+            // TODO: 开始录音
+            // 这里需要实现录音功能
+        }
+
+        function stopAnswer() {
+            isRecording = false;
+            document.querySelector('.recording-indicator').classList.remove('active');
+            document.querySelector('.start-button').disabled = true;
+            document.querySelector('.stop-button').disabled = true;
+            document.querySelector('.next-button').disabled = false;
+
+            // 停止计时
+            if (timer) {
+                clearInterval(timer);
+            }
+
+            // TODO: 停止录音并发送到服务器进行分析
+            // 这里需要实现录音停止和发送功能
+        }
+
+        async function nextQuestion() {
+            timeLeft = 120;
+            updateTimer();
+            document.querySelector('.start-button').disabled = false;
+            document.querySelector('.feedback-area').textContent = '您的回答将在这里获得实时反馈...';
+
+            try {
+                const response = await fetch('/next-question', {
+                    method: 'GET'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.querySelector('.question').textContent = data.question;
+                } else {
+                    document.querySelector('.question').textContent = '获取题目失败，请刷新页面重试。';
+                }
+            } catch (error) {
+                document.querySelector('.question').textContent = '获取题目失败，请刷新页面重试。';
+            }
+        }
+
+        // 页面加载完成后自动获取第一个问题
+        window.addEventListener('load', nextQuestion);
+    </script>
+</body>
+</html> 
