@@ -96,7 +96,7 @@
             {{.error}}
         </div>
         {{end}}
-        <form action="/generate" method="POST">
+        <form action="/generate" method="POST" id="storyForm">
             <div class="form-group">
                 <label for="exam_type">考试类型：</label>
                 <select id="exam_type" name="exam_type" required onchange="showScoreInput()">
@@ -109,18 +109,20 @@
             
             <div id="gaokao_score" class="form-group score-input">
                 <label for="gaokao_score_input">高考英语成绩：</label>
-                <input type="number" id="gaokao_score_input" name="score" min="0" max="150" placeholder="请输入0-150之间的分数">
+                <input type="number" id="gaokao_score_input" name="gaokao_score" min="0" max="150" placeholder="请输入0-150之间的分数" value="">
             </div>
             
             <div id="cet4_score" class="form-group score-input">
                 <label for="cet4_score_input">CET-4成绩：</label>
-                <input type="number" id="cet4_score_input" name="score" min="0" max="710" placeholder="请输入0-710之间的分数">
+                <input type="number" id="cet4_score_input" name="cet4_score" min="0" max="710" placeholder="请输入0-710之间的分数" value="">
             </div>
             
             <div id="cet6_score" class="form-group score-input">
                 <label for="cet6_score_input">CET-6成绩：</label>
-                <input type="number" id="cet6_score_input" name="score" min="0" max="710" placeholder="请输入0-710之间的分数">
+                <input type="number" id="cet6_score_input" name="cet6_score" min="0" max="710" placeholder="请输入0-710之间的分数" value="">
             </div>
+
+            <input type="hidden" id="final_score" name="score" value="">
 
             <div class="form-group">
                 <label for="exam_month">计划考试月份：</label>
@@ -169,6 +171,26 @@
                 }
             }
         }
+
+        // 添加表单提交前的处理
+        document.getElementById('storyForm').addEventListener('submit', function(e) {
+            const examType = document.getElementById('exam_type').value;
+            let score = 0;
+            
+            switch(examType) {
+                case 'gaokao':
+                    score = document.getElementById('gaokao_score_input').value;
+                    break;
+                case 'cet4':
+                    score = document.getElementById('cet4_score_input').value;
+                    break;
+                case 'cet6':
+                    score = document.getElementById('cet6_score_input').value;
+                    break;
+            }
+            
+            document.getElementById('final_score').value = score;
+        });
     </script>
 </body>
 </html> 
