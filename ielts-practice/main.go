@@ -5,12 +5,14 @@ import (
 	"context"
 	"crypto/md5"
 	"database/sql"
+	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -54,6 +56,10 @@ type SpeakingQuestion struct {
 	Category  string    `json:"category"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type AnswerRequest struct {
+	Question string `json:"question"`
 }
 
 var (
@@ -116,8 +122,9 @@ func generateStory(examType string, score int, month string) (string, error) {
 1. 生成的故事应该符合考生的英语水平
 2. 故事需要自然地包含上述话题中的多个话题
 3. 故事要有连贯性和趣味性
-4. 每个话题的讨论要符合雅思口语考试的要求
+4. 故事内容要符合雅思口语考试的要求
 5. 故事要适合背诵和记忆
+6. 正常语速2分钟内可以说完
 
 请生成一个完整的故事，并在故事中自然地融入这些话题。`, examType, score, month, string(topics))
 
@@ -131,22 +138,25 @@ func generateStory(examType string, score int, month string) (string, error) {
 				"content": prompt,
 			},
 		},
+		"temperature": 0.7,
+		"max_tokens":  2000,
 	})
 
 	log.Printf("发送API请求到: %s", url)
 	log.Printf("请求内容: %s", string(requestBody))
 
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestBody))
+	httpReq, err := http.NewRequest("POST", url, bytes.NewBuffer(requestBody))
 	if err != nil {
 		log.Printf("创建请求失败: %v", err)
 		return "", err
 	}
 
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+DEEPSEEK_API_KEY)
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", "Bearer "+DEEPSEEK_API_KEY)
+	httpReq.Header.Set("X-DashScope-SSE", "disable")
 
 	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := client.Do(httpReq)
 	if err != nil {
 		log.Printf("发送请求失败: %v", err)
 		return "", err
@@ -298,6 +308,30 @@ func getQuestionsFromDB() ([]SpeakingQuestion, error) {
 			return nil, fmt.Errorf("读取数据失败: %v", err)
 		}
 		questions = append(questions, q)
+	}
+
+	return questions, nil
+}
+
+// 从CSV文件读取题目
+func readQuestionsFromCSV() ([]string, error) {
+	file, err := os.Open("questions.csv")
+	if err != nil {
+		return nil, fmt.Errorf("打开CSV文件失败: %v", err)
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	records, err := reader.ReadAll()
+	if err != nil {
+		return nil, fmt.Errorf("读取CSV文件失败: %v", err)
+	}
+
+	var questions []string
+	for _, record := range records {
+		if len(record) > 0 {
+			questions = append(questions, strings.TrimSpace(record[0]))
+		}
 	}
 
 	return questions, nil
@@ -682,7 +716,7 @@ func main() {
 
 	// 获取题目的路由
 	r.GET("/questions", func(c *gin.Context) {
-		questions, err := getQuestionsFromDB()
+		questions, err := readQuestionsFromCSV()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -691,6 +725,115 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{
 			"questions": questions,
 		})
+	})
+
+	// 获取答案的路由
+	r.POST("/get-answer", func(c *gin.Context) {
+		session := sessions.Default(c)
+		if session.Get("user") == nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "请先登录"})
+			return
+		}
+
+		var answerReq AnswerRequest
+		if err := c.ShouldBindJSON(&answerReq); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		// 构建提示
+		prompt := fmt.Sprintf(`请为以下雅思口语题目生成一个高质量的答案。答案应该：
+1. 符合雅思口语考试的要求
+2. 40词以上，60词以内
+3. 不要出现任何解释，直接给出答案
+
+题目：%s
+
+请生成一个完整的答案。`, answerReq.Question)
+
+		// 调用DeepSeek API
+		url := "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+		requestBody, _ := json.Marshal(map[string]interface{}{
+			"model": "deepseek-r1",
+			"messages": []map[string]string{
+				{
+					"role":    "user",
+					"content": prompt,
+				},
+			},
+		})
+
+		log.Printf("发送API请求到: %s", url)
+		log.Printf("请求内容: %s", string(requestBody))
+
+		httpReq, err := http.NewRequest("POST", url, bytes.NewBuffer(requestBody))
+		if err != nil {
+			log.Printf("创建请求失败: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "处理请求时出现错误"})
+			return
+		}
+
+		httpReq.Header.Set("Content-Type", "application/json")
+		httpReq.Header.Set("Authorization", "Bearer "+DEEPSEEK_API_KEY)
+
+		client := &http.Client{}
+		resp, err := client.Do(httpReq)
+		if err != nil {
+			log.Printf("发送请求失败: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "处理请求时出现错误"})
+			return
+		}
+		defer resp.Body.Close()
+
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Printf("读取响应失败: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "处理请求时出现错误"})
+			return
+		}
+
+		log.Printf("API响应状态码: %d", resp.StatusCode)
+		log.Printf("API响应内容: %s", string(body))
+
+		// 检查响应状态码
+		if resp.StatusCode != http.StatusOK {
+			log.Printf("API返回错误状态码: %d", resp.StatusCode)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("API返回错误状态码: %d", resp.StatusCode)})
+			return
+		}
+
+		var result DeepSeekResponse
+		if err := json.Unmarshal(body, &result); err != nil {
+			log.Printf("解析响应失败: %v", err)
+			log.Printf("响应内容: %s", string(body))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "处理请求时出现错误"})
+			return
+		}
+
+		if len(result.Choices) == 0 {
+			log.Printf("API返回结果为空，完整响应: %+v", result)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "API返回结果为空"})
+			return
+		}
+
+		// 获取最终答案和推理过程
+		finalAnswer := result.Choices[0].Message.Content
+		reasoningContent := result.Choices[0].Message.ReasoningContent
+
+		log.Printf("获取到的答案: %s", finalAnswer)
+		if reasoningContent != "" {
+			log.Printf("获取到的推理过程: %s", reasoningContent)
+		}
+
+		response := gin.H{
+			"answer": finalAnswer,
+		}
+
+		if reasoningContent != "" {
+			response["reasoning"] = reasoningContent
+		}
+
+		c.JSON(http.StatusOK, response)
 	})
 
 	r.Run(":8080")

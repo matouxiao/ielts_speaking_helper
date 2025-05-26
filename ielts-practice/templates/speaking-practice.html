@@ -48,33 +48,39 @@
             padding: 20px;
             background-color: #f9f9f9;
             border-radius: 4px;
+            position: relative;
         }
-        .question-title {
-            font-size: 18px;
-            color: #333;
-            margin-bottom: 10px;
+        .question-number {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #666;
+            font-size: 14px;
         }
         .question-content {
-            color: #666;
-            line-height: 1.6;
-            margin-bottom: 15px;
-        }
-        .question-category {
-            color: #4CAF50;
-            font-size: 14px;
+            color: #333;
+            line-height: 1.8;
+            font-size: 18px;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         .controls {
             display: flex;
             justify-content: space-between;
             margin-top: 20px;
+            gap: 10px;
         }
         .btn {
-            padding: 10px 20px;
+            padding: 12px 24px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
-            transition: background-color 0.3s;
+            transition: all 0.3s;
+            flex: 1;
         }
         .btn-primary {
             background-color: #4CAF50;
@@ -82,13 +88,36 @@
         }
         .btn-primary:hover {
             background-color: #45a049;
+            transform: translateY(-2px);
         }
         .btn-secondary {
-            background-color: #666;
+            background-color: #2196F3;
             color: white;
         }
         .btn-secondary:hover {
+            background-color: #1976D2;
+            transform: translateY(-2px);
+        }
+        .btn-tertiary {
+            background-color: #666;
+            color: white;
+        }
+        .btn-tertiary:hover {
             background-color: #555;
+            transform: translateY(-2px);
+        }
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background-color: #eee;
+            margin: 20px 0;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .progress {
+            height: 100%;
+            background-color: #4CAF50;
+            transition: width 0.3s ease;
         }
         .error-message {
             color: #f44336;
@@ -96,6 +125,33 @@
             margin-bottom: 15px;
         }
         .loading {
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+        }
+        .answer-container {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            display: none;
+        }
+        .answer-content {
+            color: #333;
+            line-height: 1.8;
+            font-size: 16px;
+            white-space: pre-wrap;
+        }
+        .btn-answer {
+            background-color: #FF9800;
+            color: white;
+            margin-top: 10px;
+        }
+        .btn-answer:hover {
+            background-color: #F57C00;
+            transform: translateY(-2px);
+        }
+        .loading-answer {
             text-align: center;
             margin: 20px 0;
             display: none;
@@ -110,19 +166,32 @@
         </div>
         <h1>口语练习</h1>
         
+        <div class="progress-bar">
+            <div class="progress" id="progressBar"></div>
+        </div>
+
         <div class="controls">
-            <button class="btn btn-primary" onclick="fetchQuestions()">获取最新题目</button>
+            <button class="btn btn-primary" onclick="previousQuestion()">上一题</button>
             <button class="btn btn-secondary" onclick="nextQuestion()">下一题</button>
+            <button class="btn btn-tertiary" onclick="randomQuestion()">随机题目</button>
+            <button class="btn btn-answer" onclick="getAnswer()">获取答案</button>
         </div>
 
         <div class="loading" id="loading">
             正在加载题目...
         </div>
 
+        <div class="loading-answer" id="loadingAnswer">
+            正在生成答案...
+        </div>
+
         <div id="questionContainer" class="question-container">
-            <div class="question-title" id="questionTitle"></div>
+            <div class="question-number" id="questionNumber"></div>
             <div class="question-content" id="questionContent"></div>
-            <div class="question-category" id="questionCategory"></div>
+        </div>
+
+        <div id="answerContainer" class="answer-container">
+            <div class="answer-content" id="answerContent"></div>
         </div>
     </div>
 
@@ -130,36 +199,16 @@
         let currentQuestions = [];
         let currentIndex = 0;
 
-        async function fetchQuestions() {
-            const loading = document.getElementById('loading');
-            loading.style.display = 'block';
-
-            try {
-                const response = await fetch('/fetch-questions');
-                const data = await response.json();
-                
-                if (response.ok) {
-                    alert(data.message);
-                    loadQuestions();
-                } else {
-                    alert('获取题目失败：' + data.error);
-                }
-            } catch (error) {
-                alert('获取题目失败：' + error.message);
-            } finally {
-                loading.style.display = 'none';
-            }
-        }
-
         async function loadQuestions() {
             try {
                 const response = await fetch('/questions');
                 const data = await response.json();
-                
+
                 if (response.ok) {
                     currentQuestions = data.questions;
                     currentIndex = 0;
                     displayCurrentQuestion();
+                    updateProgress();
                 } else {
                     alert('加载题目失败：' + data.error);
                 }
@@ -168,32 +217,105 @@
             }
         }
 
-        function nextQuestion() {
+        function previousQuestion() {
             if (currentQuestions.length === 0) {
-                alert('请先获取题目');
+                alert('暂无题目');
                 return;
             }
+            currentIndex = (currentIndex - 1 + currentQuestions.length) % currentQuestions.length;
+            displayCurrentQuestion();
+            updateProgress();
+        }
 
+        function nextQuestion() {
+            if (currentQuestions.length === 0) {
+                alert('暂无题目');
+                return;
+            }
             currentIndex = (currentIndex + 1) % currentQuestions.length;
             displayCurrentQuestion();
+            updateProgress();
+        }
+
+        function randomQuestion() {
+            if (currentQuestions.length === 0) {
+                alert('暂无题目');
+                return;
+            }
+            currentIndex = Math.floor(Math.random() * currentQuestions.length);
+            displayCurrentQuestion();
+            updateProgress();
         }
 
         function displayCurrentQuestion() {
             if (currentQuestions.length === 0) {
-                document.getElementById('questionTitle').textContent = '暂无题目';
-                document.getElementById('questionContent').textContent = '请点击"获取最新题目"按钮获取题目';
-                document.getElementById('questionCategory').textContent = '';
+                document.getElementById('questionContent').textContent = '暂无题目';
+                document.getElementById('questionNumber').textContent = '';
                 return;
             }
 
             const question = currentQuestions[currentIndex];
-            document.getElementById('questionTitle').textContent = question.title;
-            document.getElementById('questionContent').textContent = question.content;
-            document.getElementById('questionCategory').textContent = question.category;
+            document.getElementById('questionContent').textContent = question;
+            document.getElementById('questionNumber').textContent = `题目 ${currentIndex + 1}/${currentQuestions.length}`;
+        }
+
+        function updateProgress() {
+            const progress = ((currentIndex + 1) / currentQuestions.length) * 100;
+            document.getElementById('progressBar').style.width = `${progress}%`;
+        }
+
+        async function getAnswer() {
+            if (currentQuestions.length === 0) {
+                alert('暂无题目');
+                return;
+            }
+
+            const loadingAnswer = document.getElementById('loadingAnswer');
+            const answerContainer = document.getElementById('answerContainer');
+            const answerContent = document.getElementById('answerContent');
+
+            loadingAnswer.style.display = 'block';
+            answerContainer.style.display = 'none';
+
+            try {
+                const response = await fetch('/get-answer', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        question: currentQuestions[currentIndex]
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    answerContent.textContent = data.answer;
+                    answerContainer.style.display = 'block';
+                } else {
+                    const error = await response.json();
+                    alert('获取答案失败：' + error.error);
+                }
+            } catch (error) {
+                alert('获取答案失败：' + error.message);
+            } finally {
+                loadingAnswer.style.display = 'none';
+            }
         }
 
         // 页面加载时自动加载题目
         window.onload = loadQuestions;
+
+        // 添加键盘快捷键支持
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowLeft') {
+                previousQuestion();
+            } else if (e.key === 'ArrowRight') {
+                nextQuestion();
+            } else if (e.key === 'r') {
+                randomQuestion();
+            }
+        });
     </script>
 </body>
 </html> 
